@@ -1,0 +1,233 @@
+Randomize
+Dim appName = "playorna.com.orna"
+Dim intX, intY
+Dim scriptType = CInt(ReadUIConfig("scriptType","0"))
+Dim scriptType_autoBattle = 0
+Dim scriptType_autoArena = 1
+Dim scriptType_dungeon = 2
+Dim scriptType_kingdomRaid = 3
+Dim scriptType_afk = 4
+Dim usingItem = CInt(ReadUIConfig("usingItem","0"))
+Dim usingItem_bigManaPotion = 0
+Dim attackTypeAttack = CBool(ReadUIConfig("attackTypeAttack"))
+Dim attackTypeOffHand = CBool(ReadUIConfig("attackTypeOffHand"))
+Dim attackTypeSkill = CBool(ReadUIConfig("attackTypeSkill"))
+Dim isBuffed = CBool(ReadUIConfig("isBuffed"))
+Dim isAutoOnlyOneFloor = CBool(ReadUIConfig("isAutoOnlyOneFloor"))
+Dim skillUsingNo = CInt(ReadUIConfig("skillUsingNo","0"))
+Dim attackTypeTempChange = False
+Dim isNoMana = False
+Dim usingSkillRetryCount = 0
+Dim isUsePotion = False
+Dim rColor
+Dim lastActionTime = Time()
+Dim isTargetSummon = False
+
+Function GetFindPicRangeFromFormattedPicName(picName)
+    Dim str1
+    str1 = picName
+    Dim last_
+    last_ = InStrRev(str1, "_", -1)
+    Dim dotdotPng
+    dotdotPng = InStrRev(str1, "..png", -1,true)
+    GetFindPicRangeFromFormattedPicName = Mid(str1,last_+1,dotdotPng-last_-1)
+End Function
+Function Find(picName)
+    Dim find_x1, find_y1, find_x2, find_y2, findRangeArray()
+    Dim findRangeString = GetFindPicRangeFromFormattedPicName(picName)
+    
+    findRangeArray = Split(findRangeString, ",")
+    
+    FindPic findRangeArray(0), findRangeArray(1), findRangeArray(2), findRangeArray(3), "Attachment:" & picName, "000000", 0, 0.9, intX, intY
+    If intX > -1 And intY > -1 Then 
+        Find = True
+    Else 
+        Find = False
+    End If
+End Function
+Function FindTapPic(picName)
+    Dim result = Find(picName)
+    If result Then 
+    	RandomTap intX, intY
+    End If
+    FindTapPic = result
+End Function
+Function FindTapDot(picName, tapX, tapY)
+    Dim result = Find(picName)
+	
+    If result Then 
+        RandomTap tapX, tapY
+    End If
+    
+    FindTapDot = result
+End Function
+Function GetRandomNo(min, max)
+    Dim result = Int((max - min + 1) * Rnd() + min)
+    GetRandomNo = result
+End Function
+Function GetDotColor(x, y)
+	rColor = GetPixelColor(x, y)
+	GetDotColor = rColor
+End Function
+Sub RandomTap(x, y)
+    Tap x + GetRandomNo(-10, 10), y + GetRandomNo(-10, 10)
+End Sub
+Function Attack
+    If attackTypeAttack Then 
+        If FindTapPic("Attack_353,439,374,446..png") Then 
+        	Attack = True
+        Else 
+        	Attack = False
+        End If
+    ElseIf attackTypeOffHand And attackTypeTempChange = False Then
+        If FindTapDot("Attack_353,439,374,446..png", 596, 431) Then 
+        	Attack = True
+        Else 
+        	Attack = False
+        End If
+    ElseIf attackTypeSkill or attackTypeTempChange Then
+    	If Find("SkillBtn_818,428,837,436..png") Then 
+    		If usingSkillRetryCount <= 2 Then 
+    			RandomTap intX, intY
+    			usingSkillRetryCount = 0
+    		Else 
+    			If scriptType = scriptType_autoArena And FindTapPic("Attack_353,439,374,446..png") Then 
+    				usingSkillRetryCount = 0
+    			ElseIf scriptType = scriptType_kingdomRaid Or scriptType = scriptType_dungeon Then
+    				UseItem
+    				usingSkillRetryCount = 0
+    			End If
+    		End If
+    	ElseIf Find("SkillXBtn_471,471,489,489..png") Then
+    		Dim yBase = 404
+    		Dim yVariable = -54
+    		Dim yRatio = Int(skillUsingNo / 4)
+    		Dim xBase = 129
+    		Dim xVariable = 234
+    		Dim xRatio = skillUsingNo Mod 4
+    		RandomTap xBase + xVariable * xRatio, yBase + yVariable * yRatio
+    		
+    		If usingSkillRetryCount > 2 Then 
+    			RandomTap intX, intY
+    		End If
+    		usingSkillRetryCount = usingSkillRetryCount + 1
+//    		Delay 200
+//    		If Find("SkillXBtn_471,471,489,489..png") Then 
+//    			isNoMana = True
+//    		End If
+    	End If
+    End If
+End Function
+Function MonsterCheck()
+	If Find("MonsterMightyMimic_762,4,920,38..png") Then 
+		MonsterCheck = True
+//	ElseIf Find("MonsterLightElfKnight_762,4,920,38..png") Then 
+//		MonsterCheck = True
+//	ElseIf Find("MonsterLightElf_762,4,920,38..png") Then
+//		MonsterCheck = True
+//	ElseIf Find("MonsterLightElfMage_762,4,920,38..png") Then
+//		MonsterCheck = True
+//	ElseIf Find("MonsterGouHungZhi_762,4,920,38..png") Then
+//		MonsterCheck = True
+//	ElseIf Find("MonsterDaGouDa_762,4,920,38..png") Then
+//		MonsterCheck = True
+//	ElseIf Find("MonsterGaoDuanDragonia_762,4,920,38..png") Then
+//		MonsterCheck = True
+//	ElseIf Find("MonsterGaoDuanDragoniaMage_762,4,920,38..png") Then
+//		MonsterCheck = True
+	ElseIf Find("OrihaGolem_762,4,920,38..png") Then
+		MonsterCheck = True
+	Else 
+		MonsterCheck = False
+	End If
+End Function
+Sub UseItem
+	While True
+		If FindTapPic("ItemBtn_700,487,720,495..png") Then 
+		ElseIf Find("ItemXBtn_471,472,487,487..png") Then
+			If usingItem = usingItem_bigManaPotion Then 
+				If FindTapPic("BigManaPotion_17,58,941,435..png") Then 
+					Exit While
+				End If
+			End If
+		End If
+		
+		Delay 500
+	Wend
+End Sub
+
+
+If scriptType = scriptType_autoBattle Then 
+    While True
+        Attack()
+	
+        Delay 500
+    Wend
+    
+ElseIf scriptType = scriptType_autoArena Then
+    While True
+        If isBuffed = False Then 
+            If FindTapPic("mimicBuff_795,381,817,386..png") Then 
+            	isBuffed = True
+            ElseIf FindTapPic("mimicBuff_556,380,580,386..png") Then
+                isBuffed = True
+            ElseIf FindTapPic("mimicBuff_318,380,340,386..png") Then
+            	isBuffed = True
+            End If
+        End If
+    
+    	If isBuffed = True Then 
+    		Attack()	
+    	End If
+        
+
+        If FindTapPic("ArenaMatchAgain_280,458,334,467..png") Then 
+            isBuffed = False
+        ElseIf FindTapDot("GooglePlayService_280,226,424,238..png", 82, 116) Then
+        End If
+	
+        Delay 500
+    Wend
+    
+ElseIf scriptType = scriptType_dungeon Then
+    While True      	
+        If FindTapPic("DungeonContinue_467,458,491,468..png") Then 
+        	attackTypeTempChange = False
+        	If isAutoOnlyOneFloor Then 
+        		EndScript
+        	End If
+        ElseIf MonsterCheck() And attackTypeTempChange = False Then
+        	attackTypeTempChange = True
+        End If
+		
+		Attack()
+		
+        Delay 500
+    Wend
+  
+ElseIf scriptType = scriptType_kingdomRaid Then
+	While True	
+        If isTargetSummon = False And Find("SummonMonsterHpBar_496,331,509,351..png") Then 
+        	RandomTap intX + 40, intY - 40
+        	isTargetSummon = True
+        Else 
+        	Attack 
+        	isTargetSummon = False
+        End If
+
+        Delay 500
+    Wend
+ 
+ElseIf scriptType = scriptType_afk Then
+ 	While True
+        If Sys.GetFront() = appName And Time() - lastActionTime > 300 Then 
+        	KillApp appName
+        ElseIf Sys.GetFront() <> appName Then
+        	RunApp appName
+        	lastActionTime = Time()
+        End If
+
+        Delay 5000
+    Wend
+
+End If
