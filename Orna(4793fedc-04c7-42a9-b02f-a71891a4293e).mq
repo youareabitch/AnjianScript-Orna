@@ -6,15 +6,20 @@ Dim scriptType_autoBattle = 0
 Dim scriptType_autoArena = 1
 Dim scriptType_dungeon = 2
 Dim scriptType_kingdomRaid = 3
-Dim scriptType_afk = 4
 Dim usingItem = CInt(ReadUIConfig("usingItem","0"))
 Dim usingItem_bigManaPotion = 0
 Dim attackTypeAttack = CBool(ReadUIConfig("attackTypeAttack"))
 Dim attackTypeOffHand = CBool(ReadUIConfig("attackTypeOffHand"))
 Dim attackTypeSkill = CBool(ReadUIConfig("attackTypeSkill"))
 Dim isBuffed = CBool(ReadUIConfig("isBuffed"))
+Dim isBuffed2 = CBool(ReadUIConfig("isBuffed"))
 Dim isAutoOnlyOneFloor = CBool(ReadUIConfig("isAutoOnlyOneFloor"))
 Dim skillUsingNo = CInt(ReadUIConfig("skillUsingNo","0"))
+Dim skillUsingNo2 = CInt(ReadUIConfig("skillUsingNo2","0"))
+Dim skillHealNo = CInt(ReadUIConfig("skillHealNo","0"))
+Dim isHeal = CBool(ReadUIConfig("isHeal"))
+Dim buffSkillNo1 = CInt(ReadUIConfig("buffSkillNo1","0"))
+Dim buffSkillNo2 = CInt(ReadUIConfig("buffSkillNo2","0"))
 Dim attackTypeTempChange = False
 Dim isNoMana = False
 Dim usingSkillRetryCount = 0
@@ -22,6 +27,9 @@ Dim isUsePotion = False
 Dim rColor
 Dim lastActionTime = Time()
 Dim isTargetSummon = False
+Dim isAtkDef = False
+Dim isMagDef = False
+Dim isNeedHeal = False
 
 Function GetFindPicRangeFromFormattedPicName(picName)
     Dim str1
@@ -73,20 +81,20 @@ Sub RandomTap(x, y)
     Tap x + GetRandomNo(-10, 10), y + GetRandomNo(-10, 10)
 End Sub
 Function Attack
-    If attackTypeAttack Then 
+    If attackTypeAttack And isNeedHeal = False Then 
         If FindTapPic("Attack_353,439,374,446..png") Then 
         	Attack = True
         Else 
         	Attack = False
         End If
-    ElseIf attackTypeOffHand And attackTypeTempChange = False Then
+    ElseIf attackTypeOffHand And attackTypeTempChange = False And isNeedHeal = False Then
         If FindTapDot("Attack_353,439,374,446..png", 596, 431) Then 
         	Attack = True
         Else 
         	Attack = False
         End If
-    ElseIf attackTypeSkill or attackTypeTempChange Then
-    	If Find("SkillBtn_818,428,837,436..png") Then 
+    ElseIf attackTypeSkill or attackTypeTempChange or isNeedHeal Then
+    	If Find("SkillBtn_818,428,837,436..png") Or Find("SpellBtn_816,425,839,435..png") Then 
     		If usingSkillRetryCount <= 2 Then 
     			RandomTap intX, intY
     			usingSkillRetryCount = 0
@@ -99,28 +107,33 @@ Function Attack
     			End If
     		End If
     	ElseIf Find("SkillXBtn_471,471,489,489..png") Then
+    		Dim useSkill = skillUsingNo
+    		If isNeedHeal Then 
+    			useSkill = skillHealNo
+    		ElseIf attackTypeTempChange Then
+    			useSkill = skillUsingNo2
+    		ElseIf isAtkDef Then
+    			useSkill = skillUsingNo
+    		ElseIf isMagDef Then
+    			useSkill = skillUsingNo2
+    		End If
     		Dim yBase = 404
     		Dim yVariable = -54
-    		Dim yRatio = Int(skillUsingNo / 4)
+    		Dim yRatio = Int(useSkill / 4)
     		Dim xBase = 129
     		Dim xVariable = 234
-    		Dim xRatio = skillUsingNo Mod 4
+    		Dim xRatio = useSkill Mod 4
     		RandomTap xBase + xVariable * xRatio, yBase + yVariable * yRatio
     		
-    		If usingSkillRetryCount > 2 Then 
+    		If usingSkillRetryCount > 2 And Find("SkillXBtn_471,471,489,489..png") Then 
     			RandomTap intX, intY
     		End If
     		usingSkillRetryCount = usingSkillRetryCount + 1
-//    		Delay 200
-//    		If Find("SkillXBtn_471,471,489,489..png") Then 
-//    			isNoMana = True
-//    		End If
     	End If
     End If
 End Function
 Function MonsterCheck()
-	If Find("MonsterMightyMimic_762,4,920,38..png") Then 
-		MonsterCheck = True
+	If False Then 	
 //	ElseIf Find("MonsterLightElfKnight_762,4,920,38..png") Then 
 //		MonsterCheck = True
 //	ElseIf Find("MonsterLightElf_762,4,920,38..png") Then
@@ -135,27 +148,70 @@ Function MonsterCheck()
 //		MonsterCheck = True
 //	ElseIf Find("MonsterGaoDuanDragoniaMage_762,4,920,38..png") Then
 //		MonsterCheck = True
+	ElseIf Find("MonsterMightyMimic_762,4,920,38..png") Then 
+		MonsterCheck = True
 	ElseIf Find("OrihaGolem_762,4,920,38..png") Then
 		MonsterCheck = True
 	Else 
 		MonsterCheck = False
 	End If
 End Function
+Function CheckHeal()
+	If Find("DebuffFreeze_233,62,261,307..png") Then
+    	CheckHeal = True
+    ElseIf Find("DebuffBlind_233,62,261,307..png") Then
+    	CheckHeal = True
+    ElseIf Find("DebuffBurn_233,62,261,307..png") Then
+    	CheckHeal = True
+//    ElseIf Find("DebuffPoison_233,62,261,307..png") Then	
+//    	CheckHeal = True
+    ElseIf Find("DebuffBlight_233,62,261,307..png") Then
+    	CheckHeal = True
+    ElseIf Find("DebuffRot_233,62,261,307..png") Then
+    	CheckHeal = True
+    Else 
+    	CheckHeal = False
+    End If 
+End Function
 Sub UseItem
 	While True
 		If FindTapPic("ItemBtn_700,487,720,495..png") Then 
-		ElseIf Find("ItemXBtn_471,472,487,487..png") Then
+		ElseIf FindTapPic("ItemBtnWorldRaid_470,488,489,496..png") Then
+		ElseIf Find("ItemXBtn_468,478,492,492..png") Then
 			If usingItem = usingItem_bigManaPotion Then 
 				If FindTapPic("BigManaPotion_17,58,941,435..png") Then 
 					Exit While
 				End If
 			End If
+		Else 
+			Swipe 8, 305, 9, 123
 		End If
 		
 		Delay 500
 	Wend
 End Sub
-
+Sub UseBuff
+	If FindTapPic("SkillBtn_818,428,837,436..png") Then 
+	ElseIf isBuffed = False And Find("SkillXBtn_471,471,489,489..png") Then
+    	Dim yBase = 404
+    	Dim yVariable = -54
+    	Dim yRatio = Int(buffSkillNo1 / 4)
+    	Dim xBase = 129
+    	Dim xVariable = 234
+    	Dim xRatio = buffSkillNo1 Mod 4
+    	RandomTap xBase + xVariable * xRatio, yBase + yVariable * yRatio
+    	isBuffed = True
+    ElseIf isBuffed2 = False And Find("SkillXBtn_471,471,489,489..png") Then
+    	yBase = 404
+    	yVariable = -54
+    	yRatio = Int(buffSkillNo2 / 4)
+    	xBase = 129
+    	xVariable = 234
+    	xRatio = buffSkillNo2 Mod 4
+    	RandomTap xBase + xVariable * xRatio, yBase + yVariable * yRatio
+    	isBuffed2 = True
+	End If
+End Sub
 
 If scriptType = scriptType_autoBattle Then 
     While True
@@ -167,23 +223,22 @@ If scriptType = scriptType_autoBattle Then
 ElseIf scriptType = scriptType_autoArena Then
     While True
         If isBuffed = False Then 
-            If FindTapPic("mimicBuff_795,381,817,386..png") Then 
-            	isBuffed = True
-            ElseIf FindTapPic("mimicBuff_556,380,580,386..png") Then
-                isBuffed = True
-            ElseIf FindTapPic("mimicBuff_318,380,340,386..png") Then
-            	isBuffed = True
-            End If
+            UseBuff 
+            Delay 500
         End If
+    	If isBuffed2 = False Then 
+    		UseBuff 
+    		Delay 500
+    	End If
     
-    	If isBuffed = True Then 
+    	If isBuffed = True And isBuffed2 = True Then 
     		Attack()	
     	End If
         
 
         If FindTapPic("ArenaMatchAgain_280,458,334,467..png") Then 
             isBuffed = False
-        ElseIf FindTapDot("GooglePlayService_280,226,424,238..png", 82, 116) Then
+            isBuffed2 = False
         End If
 	
         Delay 500
@@ -200,6 +255,10 @@ ElseIf scriptType = scriptType_dungeon Then
         	attackTypeTempChange = True
         End If
 		
+		If isHeal Then 
+    		isNeedHeal = CheckHeal() 	
+    	End If
+		
 		Attack()
 		
         Delay 500
@@ -211,23 +270,23 @@ ElseIf scriptType = scriptType_kingdomRaid Then
         	RandomTap intX + 40, intY - 40
         	isTargetSummon = True
         Else 
+    		If Find("AtkDef_686,200,741,308..png") Then
+    			isAtkDef = True
+    			isMagDef = False
+    		ElseIf Find("MagDef_686,200,741,308..png") Then
+    			isAtkDef = False
+    			isMagDef = True
+    		End If
+    		
+    		If isHeal Then 
+    			isNeedHeal = CheckHeal() 	
+    		End If
+    		
         	Attack 
         	isTargetSummon = False
         End If
 
         Delay 500
-    Wend
- 
-ElseIf scriptType = scriptType_afk Then
- 	While True
-        If Sys.GetFront() = appName And Time() - lastActionTime > 300 Then 
-        	KillApp appName
-        ElseIf Sys.GetFront() <> appName Then
-        	RunApp appName
-        	lastActionTime = Time()
-        End If
-
-        Delay 5000
     Wend
 
 End If
