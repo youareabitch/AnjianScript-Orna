@@ -6,6 +6,8 @@ Dim scriptType_autoBattle = 0
 Dim scriptType_autoArena = 1
 Dim scriptType_dungeon = 2
 Dim scriptType_kingdomRaid = 3
+Dim loopDelayRate = CInt(ReadUIConfig("loopDelayRate","500"))
+Dim isNotLeader = CBool(ReadUIConfig("isNotLeader"))
 Dim usingItem = CInt(ReadUIConfig("usingItem","0"))
 Dim usingItem_bigManaPotion = 0
 Dim attackTypeAttack = CBool(ReadUIConfig("attackTypeAttack"))
@@ -152,6 +154,10 @@ Function MonsterCheck()
 		MonsterCheck = True
 	ElseIf Find("OrihaGolem_762,4,920,38..png") Then
 		MonsterCheck = True
+	ElseIf Find("MonsterArisenGreatGazer_762,4,920,38..png") Then
+		MonsterCheck = True
+	ElseIf Find("MonsterNidhogg_762,4,920,38..png") Then
+		MonsterCheck = True
 	Else 
 		MonsterCheck = False
 	End If
@@ -165,8 +171,8 @@ Function CheckHeal()
     	CheckHeal = True
 //    ElseIf Find("DebuffPoison_233,62,261,307..png") Then	
 //    	CheckHeal = True
-    ElseIf Find("DebuffBlight_233,62,261,307..png") Then
-    	CheckHeal = True
+//    ElseIf Find("DebuffBlight_233,62,261,307..png") Then
+//    	CheckHeal = True
     ElseIf Find("DebuffRot_233,62,261,307..png") Then
     	CheckHeal = True
     Else 
@@ -175,23 +181,40 @@ Function CheckHeal()
 End Function
 Sub UseItem
 	While True
-		If FindTapPic("ItemBtn_700,487,720,495..png") Then 
-		ElseIf FindTapPic("ItemBtnWorldRaid_470,488,489,496..png") Then
-		ElseIf Find("ItemXBtn_468,478,492,492..png") Then
-			If usingItem = usingItem_bigManaPotion Then 
-				If FindTapPic("BigManaPotion_17,58,941,435..png") Then 
-					Exit While
+		If Find("ItemBtn_700,487,720,495..png") Then 
+			If UseItemFunction() Then 
+				Exit While
+			Else 
+				If FindTapPic("ItemBtn_700,487,720,495..png") Then 
+				ElseIf FindTapPic("ItemBtnWorldRaid_470,488,489,496..png") Then
+				ElseIf Find("ItemXBtn_468,478,492,492..png") Then
+					If UseItemFunction() Then 
+						Exit While
+					End If
+				Else 
+					Swipe 8, 305, 9, 123
 				End If
+			End If
+		ElseIf Find("ItemXBtn_468,478,492,492..png") Then
+			If UseItemFunction() Then 
+				Exit While
 			End If
 		Else 
 			Swipe 8, 305, 9, 123
 		End If
-		
-		Delay 500
+
+		Delay loopDelayRate
 	Wend
 End Sub
+Function UseItemFunction
+	If usingItem = usingItem_bigManaPotion Then 
+		UseItemFunction = FindTapPic("BigManaPotion_17,58,941,435..png")
+	Else 
+		UseItemFunction = False
+	End If
+End Function
 Sub UseBuff
-	If FindTapPic("SkillBtn_818,428,837,436..png") Then 
+	If FindTapPic("SkillBtn_818,428,837,436..png") Or FindTapPic("SpellBtn_816,425,839,435..png") Then 
 	ElseIf isBuffed = False And Find("SkillXBtn_471,471,489,489..png") Then
     	Dim yBase = 404
     	Dim yVariable = -54
@@ -217,7 +240,7 @@ If scriptType = scriptType_autoBattle Then
     While True
         Attack()
 	
-        Delay 500
+        Delay loopDelayRate
     Wend
     
 ElseIf scriptType = scriptType_autoArena Then
@@ -241,19 +264,25 @@ ElseIf scriptType = scriptType_autoArena Then
             isBuffed2 = False
         End If
 	
-        Delay 500
+        Delay loopDelayRate
     Wend
     
 ElseIf scriptType = scriptType_dungeon Then
-    While True      	
-        If FindTapPic("DungeonContinue_467,458,491,468..png") Then 
-        	attackTypeTempChange = False
-        	If isAutoOnlyOneFloor Then 
-        		EndScript
+    While True
+    	If isNotLeader = False Then 
+    		If FindTapPic("DungeonContinue_467,458,491,468..png") Then 
+        		attackTypeTempChange = False
+        		If isAutoOnlyOneFloor Then 
+        			EndScript
+        		End If
         	End If
-        ElseIf MonsterCheck() And attackTypeTempChange = False Then
-        	attackTypeTempChange = True
-        End If
+        	
+        	If MonsterCheck() Then 
+			attackTypeTempChange = True
+			Else 
+				attackTypeTempChange = False
+			End If
+    	End If
 		
 		If isHeal Then 
     		isNeedHeal = CheckHeal() 	
@@ -261,7 +290,7 @@ ElseIf scriptType = scriptType_dungeon Then
 		
 		Attack()
 		
-        Delay 500
+        Delay loopDelayRate
     Wend
   
 ElseIf scriptType = scriptType_kingdomRaid Then
@@ -286,7 +315,7 @@ ElseIf scriptType = scriptType_kingdomRaid Then
         	isTargetSummon = False
         End If
 
-        Delay 500
+        Delay loopDelayRate
     Wend
 
 End If
